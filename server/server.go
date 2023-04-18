@@ -15,6 +15,8 @@ import (
 	"os"
 	"strings"
 
+	auth_custom "github.com/arielazem/secrets-store-csi-driver-provider-aws/auth_custom"
+
 	"k8s.io/klog/v2"
 
 	"google.golang.org/grpc"
@@ -100,6 +102,17 @@ func (s *CSIDriverProviderServer) Mount(ctx context.Context, req *v1alpha1.Mount
 	region := attrib[regionAttrib]
 	translate := attrib[transAttrib]
 	failoverRegion := attrib[failoverRegionAttrib]
+
+	// Validate if the pods have permissions to the requested secrets
+	err = auth_custom.ValidatePermissions("test/123", nameSpace)
+	if err != nil {
+		klog.Errorf("Error: %s", err)
+		return nil, fmt.Errorf("Error: %s", err)
+	}
+
+	// GetRootAWSAttributes
+	sa, ns, arn := auth_custom.GetRootAWSAttributes()
+	klog.Infof("SA: %s, NS: %s, ARN: %s", sa, ns, arn)
 
 	// Make a map of the currently mounted versions (if any)
 	curVersions := req.GetCurrentObjectVersion()
